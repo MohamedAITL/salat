@@ -178,14 +178,43 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                     alignItems: "center",
                     justifyContent: "flex-start",
                     fontFamily: "'Noto Kufi Arabic', serif",
-                    padding: "2rem",
+                    padding: "2rem 1rem",
                     position: "relative",
                     overflow: "visible",
                 }}
             >
+                <style>{`
+                    .br-dropdown-container {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+                    .br-logo { height: 130px; }
+                    .br-title { font-size: 3.5rem; }
+                    .br-subtitle { font-size: 1.3rem; }
+                    .br-header, .br-row { padding: 0.75rem 1rem; }
+                    .br-header-text { font-size: 1.05rem; }
+                    .br-row-text { font-size: 1.05rem; }
+                    
+                    @media (max-width: 640px) {
+                        .br-dropdown-container {
+                            flex-direction: column;
+                            align-items: stretch !important;
+                            gap: 1rem;
+                        }
+                        .br-logo { height: 80px !important; }
+                        .br-title { font-size: 2.2rem !important; }
+                        .br-subtitle { font-size: 1rem !important; }
+                        .br-header, .br-row { padding: 0.5rem 0.25rem !important; }
+                        .br-header-text { font-size: 0.75rem !important; }
+                        .br-row-text { font-size: 0.75rem !important; }
+                    }
+                `}</style>
                 {/* Dropdown UI to select the day */}
-                <div style={{ marginBottom: "2rem", zIndex: 10, position: "relative", width: "100%", maxWidth: "820px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#222", padding: "1rem 2rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <label style={{ color: "#fff", fontWeight: "bold", fontSize: "1.1rem" }}>اختر اليوم:</label>
+                <div
+                    className="br-dropdown-container"
+                    style={{ marginBottom: "2rem", zIndex: 10, position: "relative", width: "100%", maxWidth: "820px", background: "#222", padding: "1rem 2rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                    <label style={{ color: "#fff", fontWeight: "bold", fontSize: "1.1rem", textAlign: "center" }}>اختر اليوم:</label>
                     <select
                         value={selectedIndex}
                         onChange={(e) => setSelectedIndex(Number(e.target.value))}
@@ -221,6 +250,7 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                             boxShadow: "0 4px 12px rgba(249,115,22,0.4)",
                             display: "flex",
                             alignItems: "center",
+                            justifyContent: "center",
                             gap: "8px",
                         }}
                     >
@@ -263,14 +293,15 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                             <img
                                 src="/assets/logo.png"
                                 alt="شوف TV"
-                                style={{ height: "130px", objectFit: "contain", filter: "drop-shadow(0 4px 15px rgba(249,115,22,0.4))" }}
+                                className="br-logo"
+                                style={{ objectFit: "contain", filter: "drop-shadow(0 4px 15px rgba(249,115,22,0.4))" }}
                             />
                         </div>
 
                         <h1
+                            className="br-title"
                             style={{
                                 color: "#f6d860",
-                                fontSize: "3.5rem",
                                 fontWeight: 900,
                                 margin: "0 0 0.5rem",
                                 textShadow: "0 2px 12px rgba(246,216,96,0.4)",
@@ -281,9 +312,9 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                         </h1>
 
                         <p
+                            className="br-subtitle"
                             style={{
                                 color: "#f0c060",
-                                fontSize: "1.3rem",
                                 fontWeight: 700,
                                 margin: 0,
                             }}
@@ -304,21 +335,21 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                     >
                         {/* Table Header */}
                         <div
+                            className="br-header"
                             style={{
                                 display: "grid",
                                 gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr 1fr",
                                 background: "#5b4bb0",
-                                padding: "0.75rem 1rem",
                             }}
                         >
                             {["", "الفجر", "الظهر", "العصر", "المغرب", "العشاء"].map(
                                 (h, i) => (
                                     <div
                                         key={i}
+                                        className="br-header-text"
                                         style={{
                                             color: "#ffffff",
                                             fontWeight: 700,
-                                            fontSize: "1.05rem",
                                             textAlign: "center",
                                         }}
                                     >
@@ -332,19 +363,19 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                         {selectedDay.cities.map((row, idx) => (
                             <div
                                 key={idx}
+                                className="br-row"
                                 style={{
                                     display: "grid",
                                     gridTemplateColumns: "1.6fr 1fr 1fr 1fr 1fr 1fr",
                                     background: idx % 2 === 0 ? "#f97316" : "#ea6a10",
-                                    padding: "0.7rem 1rem",
                                     borderBottom: "1px solid rgba(255,255,255,0.1)",
                                 }}
                             >
                                 <div
+                                    className="br-row-text"
                                     style={{
                                         color: "#fff",
                                         fontWeight: 700,
-                                        fontSize: "1.05rem",
                                         textAlign: "right",
                                     }}
                                 >
@@ -359,10 +390,10 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                                 ].map((t, ti) => (
                                     <div
                                         key={ti}
+                                        className="br-row-text"
                                         style={{
                                             color: "#fff",
                                             fontWeight: 700,
-                                            fontSize: "1.05rem",
                                             textAlign: "center",
                                             direction: "ltr",
                                         }}
