@@ -46,8 +46,6 @@ const parseMonthlyPrayers = (data: any) => {
       const result: Record<string, string> = {};
       const children = $(item).children();
       VALUES.forEach((value: string, index) => {
-        // skip month
-        if (index === 2) return;
         result[value] = children.eq(index).html().trim();
       });
       return result;
