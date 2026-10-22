@@ -135,9 +135,15 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
     const [selectedIndex, setSelectedIndex] = useState(defaultDayIndex);
 
     if (!days || days.length === 0) {
+        // Own dark background: the light theme paints the body white, which hid this white text
         return (
-            <div style={{ color: "white", padding: "2rem", textAlign: "center" }}>
-                No data available · <a href="/weather" style={{ color: "#f97316" }}>حالة الطقس</a>
+            <div dir="rtl" style={{ minHeight: "100vh", background: "#111", color: "#fff", padding: "4rem 1rem", textAlign: "center", lineHeight: 2 }}>
+                <p>تعذر جلب مواقيت الصلاة من موقع وزارة الأوقاف (habous.gov.ma). حاول مرة أخرى لاحقاً.</p>
+                <p>
+                    <a href="/broadcast" style={{ color: "#f97316" }}>إعادة المحاولة</a>
+                    {" · "}
+                    <a href="/weather" style={{ color: "#f97316" }}>حالة الطقس</a>
+                </p>
             </div>
         );
     }
