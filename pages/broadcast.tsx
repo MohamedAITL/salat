@@ -45,18 +45,21 @@ const formatTime = (t: string | undefined) =>
     t ? t.replace(/\s*\(.*?\)/g, "").trim() : "--:--";
 
 export const getServerSideProps: GetServerSideProps = async () => {
-    const allCitiesData = await Promise.all(
-        BROADCAST_CITIES.map(async (city) => {
-            try {
-                const data = await getMonthlyPrayers(city.id);
-                return data || [];
-            } catch {
-                return [];
-            }
-        })
-    );
+    const fetchCity = async (city: { id: number }) => {
+        try {
+            const data = await getMonthlyPrayers(city.id);
+            return data || [];
+        } catch {
+            return [];
+        }
+    };
 
-    const firstCityData = allCitiesData[0];
+    // The first city's table builds the day list, so when habous.gov.ma is down
+    // give up after one request instead of waiting on all 8
+    const firstCityData = await fetchCity(BROADCAST_CITIES[0]);
+    const allCitiesData = firstCityData.length > 1
+        ? [firstCityData, ...(await Promise.all(BROADCAST_CITIES.slice(1).map(fetchCity)))]
+        : [];
     const days: DayOption[] = [];
 
     if (firstCityData && firstCityData.length > 1) {
