@@ -11,4 +11,5 @@ https://user-images.githubusercontent.com/15774583/185401584-49f94b08-2c89-4b9f-
  - Hijri Date
  - Daily prayer times (with diplaying remaining time to the next prayer)
  - Monthly prayer (With download as PDF available)
+ - Weather poster for 12 Moroccan cities (`/weather`, data and icons from meteomaroc.com, download as PNG)
  
