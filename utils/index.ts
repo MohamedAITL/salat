@@ -35,7 +35,10 @@ const getDataByCity = async (
   parseFn: (data: any) => any,
 ) => {
   try {
-    const response = await fetch(`${url}${city}`);
+    // habous.gov.ma can take ~40s to answer 504 when down; meteomaroc's slowest successful replies take ~10s
+    const response = await fetch(`${url}${city}`, {
+      signal: AbortSignal.timeout(15000),
+    });
     if (!response.ok) {
       throw new Error(`API returned status ${response.status}`);
     }

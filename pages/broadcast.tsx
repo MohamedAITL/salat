@@ -45,18 +45,21 @@ const formatTime = (t: string | undefined) =>
     t ? t.replace(/\s*\(.*?\)/g, "").trim() : "--:--";
 
 export const getServerSideProps: GetServerSideProps = async () => {
-    const allCitiesData = await Promise.all(
-        BROADCAST_CITIES.map(async (city) => {
-            try {
-                const data = await getMonthlyPrayers(city.id);
-                return data || [];
-            } catch {
-                return [];
-            }
-        })
-    );
+    const fetchCity = async (city: { id: number }) => {
+        try {
+            const data = await getMonthlyPrayers(city.id);
+            return data || [];
+        } catch {
+            return [];
+        }
+    };
 
-    const firstCityData = allCitiesData[0];
+    // The first city's table builds the day list, so when habous.gov.ma is down
+    // give up after one request instead of waiting on all 8
+    const firstCityData = await fetchCity(BROADCAST_CITIES[0]);
+    const allCitiesData = firstCityData.length > 1
+        ? [firstCityData, ...(await Promise.all(BROADCAST_CITIES.slice(1).map(fetchCity)))]
+        : [];
     const days: DayOption[] = [];
 
     if (firstCityData && firstCityData.length > 1) {
@@ -135,9 +138,15 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
     const [selectedIndex, setSelectedIndex] = useState(defaultDayIndex);
 
     if (!days || days.length === 0) {
+        // Own dark background: the light theme paints the body white, which hid this white text
         return (
-            <div style={{ color: "white", padding: "2rem", textAlign: "center" }}>
-                No data available · <a href="/weather" style={{ color: "#f97316" }}>حالة الطقس</a>
+            <div dir="rtl" style={{ minHeight: "100vh", background: "#111", color: "#fff", padding: "4rem 1rem", textAlign: "center", lineHeight: 2 }}>
+                <p>تعذر جلب مواقيت الصلاة من موقع وزارة الأوقاف (habous.gov.ma). حاول مرة أخرى لاحقاً.</p>
+                <p>
+                    <a href="/broadcast" style={{ color: "#f97316" }}>إعادة المحاولة</a>
+                    {" · "}
+                    <a href="/weather" style={{ color: "#f97316" }}>حالة الطقس</a>
+                </p>
             </div>
         );
     }
