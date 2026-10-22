@@ -135,7 +135,11 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
     const [selectedIndex, setSelectedIndex] = useState(defaultDayIndex);
 
     if (!days || days.length === 0) {
-        return <div style={{ color: "white", padding: "2rem", textAlign: "center" }}>No data available</div>;
+        return (
+            <div style={{ color: "white", padding: "2rem", textAlign: "center" }}>
+                No data available · <a href="/weather" style={{ color: "#f97316" }}>حالة الطقس</a>
+            </div>
+        );
     }
 
     const selectedDay = days[selectedIndex];
@@ -232,10 +236,12 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                             minWidth: "250px"
                         }}
                     >
+                        {/* value is the position in days (what selectedIndex indexes), not the habous row number */}
                         {days.map((day, idx) => (
-                            <option key={idx} value={day.value}>{day.label}</option>
+                            <option key={idx} value={idx}>{day.label}</option>
                         ))}
                     </select>
+                    <a href="/weather" style={{ color: "#fff", fontWeight: "bold", textDecoration: "underline", textAlign: "center" }}>حالة الطقس</a>
                     <button
                         onClick={handleDownloadImage}
                         style={{

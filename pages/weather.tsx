@@ -1,8 +1,7 @@
 import type { NextPage, GetServerSideProps } from "next";
-import { getWeatherDay } from "utils";
+import { getWeatherDays } from "utils";
 import Head from "next/head";
-import { useRouter } from "next/router";
-import { Fragment, useRef } from "react";
+import { Fragment, useRef, useState } from "react";
 import * as htmlToImage from "html-to-image";
 
 // meteomaroc.com slugs, row by row (right column first), matching the names printed on weather-template.jpg
@@ -19,22 +18,30 @@ const WEATHER_CITIES = [
 const ROW_TOPS = [43.02, 51.42, 59.72, 68.07, 76.42, 84.81];
 const COLUMNS = [{ temp: 58.85, icon: 91.4 }, { temp: 20.76, icon: 8.6 }]; // right, left
 
+const DAY_COUNT = 14; // meteomaroc forecasts today + 13 days
+
+const formatDate = new Intl.DateTimeFormat("ar-MA", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Africa/Casablanca",
+});
+
 interface CityWeather {
+    day: number;
     icon: string | null;
     max: string;
     min: string;
 }
 
 interface DayOption {
-    value: number;
-    label: string;
+    date: string;
+    cities: (CityWeather | null)[];
 }
 
 interface WeatherProps {
-    day: number;
-    date: string;
     days: DayOption[];
-    cities: (CityWeather | null)[];
 }
 
 const at = (left: number, top: number) => ({
@@ -45,29 +52,26 @@ const at = (left: number, top: number) => ({
     whiteSpace: "nowrap" as const,
 });
 
-export const getServerSideProps: GetServerSideProps = async ({ query }) => {
-    const requested = Number(query.day);
-    const day = Number.isInteger(requested) && requested >= 1 && requested <= 14 ? requested : 1;
+export const getServerSideProps: GetServerSideProps = async () => {
+    // One request per city loads all 14 days, so the day picker switches instantly without refetching.
+    // One at a time: meteomaroc stalls bursts of parallel connections for ~10s.
+    // getWeatherDays returns null on any fetch/parse failure, so one city can't break the poster.
+    const results: (CityWeather[] | null)[] = [];
+    for (const slug of WEATHER_CITIES) results.push(await getWeatherDays(slug));
 
-    // One request at a time: meteomaroc stalls bursts of parallel connections for ~10s.
-    // getWeatherDay returns null on any fetch/parse failure, so one city can't break the poster.
-    const results = [];
-    for (const slug of WEATHER_CITIES) results.push(await getWeatherDay(slug, day));
-    const first = results.find(Boolean);
+    const days = Array.from({ length: DAY_COUNT }, (_, i) => ({
+        // "الخميس، 22 أكتوبر 2026" -> "الخميس 22 أكتوبر 2026", as meteomaroc writes it
+        date: formatDate.format(new Date(Date.now() + i * 864e5)).replace("،", ""),
+        cities: results.map((r) => r?.find((d) => d.day === i + 1) ?? null),
+    }));
 
-    return {
-        props: {
-            day,
-            date: first?.date ?? "",
-            days: [{ value: 1, label: "اليوم" }, ...(first?.days ?? [])],
-            cities: results.map((r) => r && { icon: r.icon, max: r.max, min: r.min }),
-        },
-    };
+    return { props: { days } };
 };
 
-const Weather: NextPage<WeatherProps> = ({ day, date, days, cities }) => {
-    const router = useRouter();
+const Weather: NextPage<WeatherProps> = ({ days }) => {
     const exportRef = useRef<HTMLDivElement>(null);
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const { date, cities } = days[selectedIndex];
 
     const handleDownloadImage = async () => {
         if (!exportRef.current) return;
@@ -116,14 +120,15 @@ const Weather: NextPage<WeatherProps> = ({ day, date, days, cities }) => {
                     <label htmlFor="weather-day" style={{ color: "#fff", fontWeight: "bold", fontSize: "1.1rem" }}>اختر اليوم:</label>
                     <select
                         id="weather-day"
-                        value={day}
-                        onChange={(e) => router.push(`/weather?day=${e.target.value}`)}
+                        value={selectedIndex}
+                        onChange={(e) => setSelectedIndex(Number(e.target.value))}
                         style={{ padding: "10px 16px", borderRadius: "8px", border: "none", background: "#fff", color: "#111", fontSize: "1rem", fontWeight: "bold", fontFamily: "inherit", cursor: "pointer", minWidth: "250px" }}
                     >
-                        {days.map((d) => (
-                            <option key={d.value} value={d.value}>{d.label}</option>
+                        {days.map((d, i) => (
+                            <option key={i} value={i}>{i === 0 ? `اليوم - ${d.date}` : d.date}</option>
                         ))}
                     </select>
+                    <a href="/broadcast" style={{ color: "#fff", fontWeight: "bold", textDecoration: "underline" }}>مواقيت الصلاة</a>
                     <button
                         onClick={handleDownloadImage}
                         style={{ padding: "10px 20px", background: "#f97316", color: "#fff", fontWeight: "bold", fontSize: "1rem", fontFamily: "inherit", border: "none", borderRadius: "8px", cursor: "pointer", boxShadow: "0 4px 12px rgba(249,115,22,0.4)" }}
