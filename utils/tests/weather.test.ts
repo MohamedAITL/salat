@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { parseWeatherDay, weatherIcon } from "../index";
+import { parseWeatherDays, weatherIcon } from "../index";
 
 // Trimmed from https://www.meteomaroc.com/ar/previsions/casablanca?day=1
 const PAGE = `
@@ -13,22 +13,17 @@ const PAGE = `
 <p> الصغرى <span class="cooled-meteo"> <img src="/build/assets/images/arrow-down.png" alt="météo الدار البيضاء"/> 16° </span> </p>
 </div></div>`;
 
-describe("parseWeatherDay", () => {
-  it("reads the selected day and the other days of the forecast", () => {
-    expect(parseWeatherDay(PAGE)).toEqual({
-      date: "الخميس 22 أكتوبر 2026",
-      icon: "/assets/weather/nuageux2.png",
-      max: "25°",
-      min: "16°",
-      days: [
-        { value: 2, label: "جمع 23" },
-        { value: 3, label: "سبت 24" },
-      ],
-    });
+describe("parseWeatherDays", () => {
+  it("reads today and the following days from the strip", () => {
+    expect(parseWeatherDays(PAGE)).toEqual([
+      { day: 1, icon: "/assets/weather/nuageux2.png", max: "25°", min: "16°" },
+      { day: 2, icon: "/assets/weather/nuageux.png", max: "25°", min: "18°" },
+      { day: 3, icon: "/assets/weather/nuageux.png", max: "26°", min: "16°" },
+    ]);
   });
 
   it("returns null for the empty page of an unknown city", () => {
-    expect(parseWeatherDay("<html><body><h1> </h1></body></html>")).toBeNull();
+    expect(parseWeatherDays("<html><body><h1> </h1></body></html>")).toBeNull();
   });
 });
 

@@ -53,8 +53,9 @@ export const getMonthlyPrayers = async (city: number) => {
 export const getDailyPrayers = async (city: number) => {
   return getDataByCity(city, DAILY_URL, parseDailyPrayers);
 };
-export const getWeatherDay = async (slug: string, day: number) => {
-  return getDataByCity(`${slug}?day=${day}`, METEO_URL, parseWeatherDay);
+// The day=1 page holds today's forecast plus a strip with days 2-14, so one request covers every day
+export const getWeatherDays = async (slug: string) => {
+  return getDataByCity(`${slug}?day=1`, METEO_URL, parseWeatherDays);
 };
 
 export const weatherIcon = (code: number) => {
@@ -64,26 +65,31 @@ export const weatherIcon = (code: number) => {
   return name ? `/assets/weather/${name}.png` : null;
 };
 
-export const parseWeatherDay = (data: string) => {
+const iconFromClass = (className?: string) => {
+  const code = className?.match(/weathericon(\d+)/)?.[1];
+  return code ? weatherIcon(Number(code)) : null;
+};
+
+export const parseWeatherDays = (data: string) => {
   const $ = load(data);
-  const code = $(".weathericon-big")
-    .attr("class")
-    ?.match(/weathericon(\d+)/)?.[1];
   const max = $(".hote-meteo").first().text().trim();
   // meteomaroc answers unknown cities with an empty page
-  if (!code && !max) return null;
-  return {
-    date: $(".selected_ville_part1_top > label").first().text().trim(),
-    icon: code ? weatherIcon(Number(code)) : null,
+  if (!max) return null;
+  const today = {
+    day: 1,
+    icon: iconFromClass($(".weathericon-big").attr("class")),
     max,
     min: $(".cooled-meteo").first().text().trim(),
-    days: $("a.item_previsionsjours_slider_days_list")
-      .toArray()
-      .map((a) => ({
-        value: Number($(a).attr("href")?.match(/day=(\d+)/)?.[1]),
-        label: $(a).find("label").text().trim(),
-      })),
   };
+  const nextDays = $("a.item_previsionsjours_slider_days_list")
+    .toArray()
+    .map((a) => ({
+      day: Number($(a).attr("href")?.match(/day=(\d+)/)?.[1]),
+      icon: iconFromClass($(a).find("i").attr("class")),
+      max: $(a).find(".hote").text().trim(),
+      min: $(a).find(".cooled").text().trim(),
+    }));
+  return [today, ...nextDays];
 };
 
 const parseMonthlyPrayers = (data: any) => {
