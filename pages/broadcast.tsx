@@ -1,5 +1,6 @@
 import type { NextPage, GetServerSideProps } from "next";
-import { getMonthlyPrayers } from "utils";
+import { getAladhanPrayers, getMonthlyPrayers, toMoroccoTime } from "utils";
+import cities from "data/cities.json";
 import Head from "next/head";
 import { useRef, useState } from "react";
 import * as htmlToImage from "html-to-image";
@@ -39,10 +40,57 @@ interface DayOption {
 interface BroadcastProps {
     days: DayOption[];
     defaultDayIndex: number;
+    source: "habous" | "aladhan";
 }
 
 const formatTime = (t: string | undefined) =>
     t ? t.replace(/\s*\(.*?\)/g, "").trim() : "--:--";
+
+// Gregorian month names as habous.gov.ma writes them
+const MOROCCAN_MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "ماي", "يونيو", "يوليوز", "غشت", "شتنبر", "أكتوبر", "نونبر", "دجنبر"];
+
+const moroccoDate = (ms: number) =>
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Casablanca", day: "2-digit", month: "2-digit", year: "numeric" })
+        .format(ms)
+        .replace(/\//g, "-");
+
+// Next 30 days from Aladhan, shaped like the habous days, for when habous.gov.ma is down
+const getBackupDays = async (): Promise<DayOption[]> => {
+    const from = moroccoDate(Date.now());
+    const to = moroccoDate(Date.now() + 29 * 864e5);
+    const calendars = await Promise.all(BROADCAST_CITIES.map(({ id }) => {
+        const city = cities.find((c) => c.id === id)!;
+        // cities.json stores degrees and minutes; Moroccan longitudes are west
+        return getAladhanPrayers(city.lat_d + city.lat_m / 60, -(city.long_d + city.long_m / 60), from, to);
+    }));
+    if (!calendars[0]) return [];
+
+    return calendars[0].map((day: any, i: number) => {
+        const g = day.date.gregorian;
+        const h = day.date.hijri;
+        const dayName = h.weekday.ar;
+        const gMonthName = MOROCCAN_MONTHS[g.month.number - 1];
+        const hMonthName = h.month.ar.replace(/[ً-ْ]/g, ""); // drop diacritics: "جُمادى" -> "جمادى"
+        return {
+            value: i,
+            label: `${dayName} ${g.day} ${gMonthName} - ${h.day} ${hMonthName}`,
+            titleStr: `${dayName} ${h.day} ${hMonthName} ${h.year}هـ | الموافق ${g.day} ${gMonthName} ${g.year}م`,
+            cities: BROADCAST_CITIES.map((city, cIdx) => {
+                const t = calendars[cIdx]?.[i]?.timings;
+                return {
+                    name: city.name,
+                    times: t ? {
+                        fajr: toMoroccoTime(t.Fajr),
+                        dohr: toMoroccoTime(t.Dhuhr),
+                        asr: toMoroccoTime(t.Asr),
+                        maghrib: toMoroccoTime(t.Maghrib),
+                        ishae: toMoroccoTime(t.Isha),
+                    } : null,
+                };
+            }),
+        };
+    });
+};
 
 export const getServerSideProps: GetServerSideProps = async () => {
     const fetchCity = async (city: { id: number }) => {
@@ -119,6 +167,9 @@ export const getServerSideProps: GetServerSideProps = async () => {
         }
     }
 
+    const source = days.length > 0 ? "habous" : "aladhan";
+    if (source === "aladhan") days.push(...await getBackupDays());
+
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowDay = tomorrow.getDate();
@@ -130,10 +181,10 @@ export const getServerSideProps: GetServerSideProps = async () => {
         defaultDayIndex = tomorrowIndex;
     }
 
-    return { props: { days, defaultDayIndex } };
+    return { props: { days, defaultDayIndex, source } };
 };
 
-const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
+const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex, source }) => {
     const exportRef = useRef<HTMLDivElement>(null);
     const [selectedIndex, setSelectedIndex] = useState(defaultDayIndex);
 
@@ -141,7 +192,7 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
         // Own dark background: the light theme paints the body white, which hid this white text
         return (
             <div dir="rtl" style={{ minHeight: "100vh", background: "#111", color: "#fff", padding: "4rem 1rem", textAlign: "center", lineHeight: 2 }}>
-                <p>تعذر جلب مواقيت الصلاة من موقع وزارة الأوقاف (habous.gov.ma). حاول مرة أخرى لاحقاً.</p>
+                <p>تعذر جلب مواقيت الصلاة من موقع وزارة الأوقاف (habous.gov.ma) ومن المصدر الاحتياطي (aladhan.com). حاول مرة أخرى لاحقاً.</p>
                 <p>
                     <a href="/broadcast" style={{ color: "#f97316" }}>إعادة المحاولة</a>
                     {" · "}
@@ -286,6 +337,12 @@ const Broadcast: NextPage<BroadcastProps> = ({ days, defaultDayIndex }) => {
                         تحميل
                     </button>
                 </div>
+
+                {source === "aladhan" && (
+                    <p style={{ color: "#f6d860", width: "100%", maxWidth: "820px", margin: "-1rem 0 1.5rem", textAlign: "center", fontSize: "0.95rem" }}>
+                        موقع habous.gov.ma غير متاح: المواقيت من المصدر الاحتياطي aladhan.com (طريقة المغرب). تحقق من التاريخ الهجري قبل النشر.
+                    </p>
+                )}
 
                 {/* The Graphic we want to export */}
                 <div
