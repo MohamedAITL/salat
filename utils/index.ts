@@ -15,6 +15,7 @@ const VALUES = [
 const MONTHLY_URL = "https://habous.gov.ma/prieres/horaire_hijri_2.php?ville=";
 const DAILY_URL = "https://www.habous.gov.ma/prieres/horaire-api.php?ville=";
 const METEO_URL = "https://www.meteomaroc.com/ar/previsions/";
+const ALADHAN_URL = "https://api.aladhan.com/v1/calendar/from/";
 
 // Icon file in public/assets/weather -> meteomaroc weather codes, as mapped in its /build/appfrontend.css
 const WEATHER_ICONS: Record<string, number[]> = {
@@ -49,6 +50,24 @@ const getDataByCity = async (
     return null;
   }
 };
+
+// Backup while habous.gov.ma is down: Aladhan's Morocco method (21) matched archived habous tables within 2 minutes.
+// iso8601 returns true UTC instants (Aladhan's own Moroccan clock is an hour off), so convert them with toMoroccoTime.
+export const getAladhanPrayers = async (lat: number, lng: number, from: string, to: string) => {
+  return getDataByCity(
+    `${from}/to/${to}?latitude=${lat}&longitude=${lng}&method=21&iso8601=true`,
+    ALADHAN_URL,
+    (data) => JSON.parse(data).data,
+  );
+};
+
+// "HH:MM" on Morocco's legal clock: UTC+1, UTC+0 during Ramadan
+export const toMoroccoTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("en-GB", {
+    timeZone: "Africa/Casablanca",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 export const getMonthlyPrayers = async (city: number) => {
   return getDataByCity(city, MONTHLY_URL, parseMonthlyPrayers);
