@@ -52,7 +52,7 @@ const getDataByCity = async (
 };
 
 // Backup while habous.gov.ma is down: Aladhan's Morocco method (21) matched archived habous tables within 2 minutes.
-// iso8601 returns true UTC instants (Aladhan's own Moroccan clock is an hour off), so convert them with toMoroccoTime.
+// Times come back as ISO strings with Aladhan's Moroccan UTC offset; read them with toMoroccoTime.
 export const getAladhanPrayers = async (lat: number, lng: number, from: string, to: string) => {
   return getDataByCity(
     `${from}/to/${to}?latitude=${lat}&longitude=${lng}&method=21&iso8601=true`,
@@ -61,13 +61,9 @@ export const getAladhanPrayers = async (lat: number, lng: number, from: string, 
   );
 };
 
-// "HH:MM" on Morocco's legal clock: UTC+1, UTC+0 during Ramadan
-export const toMoroccoTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-GB", {
-    timeZone: "Africa/Casablanca",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+// "HH:MM" as Aladhan states it. Its Moroccan clock (UTC+0 in Oct 2026) matches local clocks;
+// Node's tz data (2026b) still says UTC+1 and showed every prayer an hour late.
+export const toMoroccoTime = (iso: string) => iso.slice(11, 16);
 
 export const getMonthlyPrayers = async (city: number) => {
   return getDataByCity(city, MONTHLY_URL, parseMonthlyPrayers);
